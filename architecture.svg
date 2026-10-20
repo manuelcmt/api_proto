@@ -1,0 +1,168 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="880" viewBox="0 0 1400 880" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title>Production Metrics ETL – Architecture</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2a78d6"/>
+    </marker>
+    <style>
+      .card { fill: #ffffff; stroke: #d6d4cf; stroke-width: 1.5; }
+      .title { font-family: ui-monospace, 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 16px; font-weight: 700; fill: #0b0b0b; }
+      .sub { font-size: 12.5px; fill: #52514e; }
+      .line { font-size: 12.5px; fill: #0b0b0b; }
+      .rule { stroke: #e8e7e3; stroke-width: 1; }
+      .num { fill: #2a78d6; }
+      .numtxt { font-size: 13px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+      .flow { stroke: #2a78d6; stroke-width: 2.5; fill: none; marker-end: url(#arr); }
+      .flowlbl { font-size: 12px; fill: #2a78d6; font-weight: 600; text-anchor: middle; }
+      .boxlbl { font-size: 13px; font-weight: 700; letter-spacing: 0.06em; fill: #52514e; }
+      .port { fill: #0b0b0b; }
+      .porttxt { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; font-weight: 700; fill: #ffffff; text-anchor: middle; }
+      .col { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; fill: #0b0b0b; }
+      .type { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 11.5px; fill: #52514e; text-anchor: end; }
+    </style>
+  </defs>
+
+  <rect width="1400" height="880" fill="#fcfcfb"/>
+
+  <!-- Header -->
+  <text x="30" y="52" font-size="26" font-weight="700" fill="#0b0b0b">Production Metrics ETL — Architecture</text>
+  <text x="30" y="82" font-size="14" fill="#52514e">Packing events flow from a simulated plant through an HTTP buffer and an ETL into BigQuery, and are visualized in Dash.</text>
+
+  <!-- Zones -->
+  <rect x="30" y="120" width="290" height="640" rx="14" fill="none" stroke="#a9a79f" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="50" y="152" class="boxlbl">THIS PC (HOST)</text>
+
+  <rect x="400" y="120" width="970" height="640" rx="14" fill="#f2f6fc" stroke="#2a78d6" stroke-width="1.5" stroke-dasharray="6 5"/>
+  <text x="420" y="152" class="boxlbl">DOCKER COMPOSE · NETWORK "etl" (PRIVATE BRIDGE)</text>
+
+  <!-- 1 Generator -->
+  <rect x="50" y="190" width="250" height="190" rx="10" class="card"/>
+  <circle cx="72" cy="216" r="12" class="num"/><text x="72" y="220.5" class="numtxt">1</text>
+  <text x="92" y="221" class="title">production_replay.py</text>
+  <text x="66" y="246" class="sub">Data source · simulated plant</text>
+  <line x1="66" y1="258" x2="284" y2="258" class="rule"/>
+  <text x="66" y="280" class="line">Reads metrics_anonymized.sqlite</text>
+  <text x="66" y="300" class="line">Shifts dates: last day = today</text>
+  <text x="66" y="320" class="line">Preloads 23 days of history</text>
+  <text x="66" y="340" class="line">Replays today at 10× speed</text>
+  <text x="66" y="360" class="line">Retries until accepted</text>
+
+  <!-- 2 Receiver -->
+  <rect x="440" y="190" width="240" height="190" rx="10" class="card"/>
+  <circle cx="462" cy="216" r="12" class="num"/><text x="462" y="220.5" class="numtxt">2</text>
+  <text x="482" y="221" class="title">receiver</text>
+  <text x="456" y="246" class="sub">Data input · FastAPI</text>
+  <line x1="456" y1="258" x2="664" y2="258" class="rule"/>
+  <text x="456" y="280" class="line">Checks API key</text>
+  <text x="456" y="300" class="line">Validates each event</text>
+  <text x="456" y="320" class="line">Buffers events in SQLite</text>
+  <text x="456" y="340" class="line">Volume: bufferdata</text>
+  <text x="456" y="360" class="line">Serves batches to the ETL</text>
+
+  <!-- 3 ETL -->
+  <rect x="760" y="190" width="240" height="190" rx="10" class="card"/>
+  <circle cx="782" cy="216" r="12" class="num"/><text x="782" y="220.5" class="numtxt">3</text>
+  <text x="802" y="221" class="title">etl</text>
+  <text x="776" y="246" class="sub">Transform · Python</text>
+  <line x1="776" y1="258" x2="984" y2="258" class="rule"/>
+  <text x="776" y="280" class="line">Pulls ≤5,000 events every 5 s</text>
+  <text x="776" y="300" class="line">Normalizes codes, UTC times</text>
+  <text x="776" y="320" class="line">Resolves packer name &amp; group</text>
+  <text x="776" y="340" class="line">Loads one flat table</text>
+  <text x="776" y="360" class="line">Cursor kept in BigQuery</text>
+
+  <!-- 4 BigQuery -->
+  <rect x="1080" y="190" width="260" height="190" rx="10" class="card"/>
+  <circle cx="1102" cy="216" r="12" class="num"/><text x="1102" y="220.5" class="numtxt">4</text>
+  <text x="1122" y="221" class="title">bigquery</text>
+  <text x="1096" y="246" class="sub">Storage · BigQuery emulator</text>
+  <line x1="1096" y1="258" x2="1324" y2="258" class="rule"/>
+  <text x="1096" y="280" class="line">goccy/bigquery-emulator</text>
+  <text x="1096" y="300" class="line">LocalStack-style, for GCP</text>
+  <text x="1096" y="320" class="line">Project demo-etl, dataset metrics</text>
+  <text x="1096" y="340" class="line">Volume: bqdata</text>
+  <text x="1096" y="360" class="line">Same SDK as real BigQuery</text>
+
+  <!-- Table schema -->
+  <line x1="1210" y1="380" x2="1210" y2="430" stroke="#a9a79f" stroke-width="1.5" stroke-dasharray="4 4"/>
+  <rect x="1080" y="430" width="260" height="305" rx="10" class="card"/>
+  <text x="1096" y="460" class="title">metrics.events</text>
+  <text x="1096" y="480" class="sub">One tidy row per box packed</text>
+  <line x1="1096" y1="492" x2="1324" y2="492" class="rule"/>
+  <g>
+    <text x="1096" y="514" class="col">buffer_id</text><text x="1324" y="514" class="type">STRING</text>
+    <text x="1096" y="532.5" class="col">event_id</text><text x="1324" y="532.5" class="type">INT64</text>
+    <text x="1096" y="551" class="col">registered_on</text><text x="1324" y="551" class="type">TIMESTAMP</text>
+    <text x="1096" y="569.5" class="col">event_date</text><text x="1324" y="569.5" class="type">DATE</text>
+    <text x="1096" y="588" class="col">terminal</text><text x="1324" y="588" class="type">STRING</text>
+    <text x="1096" y="606.5" class="col">production_line</text><text x="1324" y="606.5" class="type">STRING</text>
+    <text x="1096" y="625" class="col">presentation</text><text x="1324" y="625" class="type">STRING</text>
+    <text x="1096" y="643.5" class="col">unique_n</text><text x="1324" y="643.5" class="type">INT64</text>
+    <text x="1096" y="662" class="col">packer_id</text><text x="1324" y="662" class="type">STRING</text>
+    <text x="1096" y="680.5" class="col">packer_name</text><text x="1324" y="680.5" class="type">STRING</text>
+    <text x="1096" y="699" class="col">packer_group</text><text x="1324" y="699" class="type">STRING</text>
+    <text x="1096" y="717.5" class="col">loaded_at</text><text x="1324" y="717.5" class="type">TIMESTAMP</text>
+  </g>
+
+  <!-- 5 Dashboard -->
+  <rect x="700" y="510" width="300" height="150" rx="10" class="card"/>
+  <circle cx="722" cy="536" r="12" class="num"/><text x="722" y="540.5" class="numtxt">5</text>
+  <text x="742" y="541" class="title">dashboard</text>
+  <text x="716" y="566" class="sub">Frontend · Plotly Dash</text>
+  <line x1="716" y1="578" x2="984" y2="578" class="rule"/>
+  <text x="716" y="600" class="line">Filters: date range, line, presentation</text>
+  <text x="716" y="620" class="line">3 KPIs, 5 charts, latest events table</text>
+  <text x="716" y="640" class="line">Incremental refresh every 10 s</text>
+
+  <!-- Reliability note -->
+  <rect x="440" y="420" width="240" height="118" rx="10" fill="#ffffff" stroke="#d6d4cf" stroke-width="1.5" stroke-dasharray="4 3"/>
+  <text x="456" y="444" font-size="13" font-weight="700" fill="#0b0b0b">Reliable hand-off</text>
+  <text x="456" y="466" class="line">Receiver deletes events only</text>
+  <text x="456" y="484" class="line">after the ETL confirms them.</text>
+  <text x="456" y="502" class="line">Restarts resume from the cursor:</text>
+  <text x="456" y="520" class="line">nothing lost, nothing doubled.</text>
+
+  <!-- Browser -->
+  <rect x="50" y="530" width="250" height="110" rx="10" class="card"/>
+  <text x="66" y="561" class="title">Browser</text>
+  <text x="66" y="586" class="sub">http://localhost:8050</text>
+  <line x1="66" y1="598" x2="284" y2="598" class="rule"/>
+  <text x="66" y="620" class="line">Demo audience</text>
+
+  <!-- Flows -->
+  <path d="M300,285 L438,285" class="flow"/>
+  <text x="360" y="268" class="flowlbl">HTTP POST</text>
+  <text x="360" y="310" class="flowlbl">API key</text>
+
+  <path d="M680,285 L758,285" class="flow"/>
+  <text x="720" y="272" class="flowlbl">pull</text>
+  <text x="720" y="306" class="flowlbl">batches</text>
+
+  <path d="M1000,285 L1078,285" class="flow"/>
+  <text x="1040" y="272" class="flowlbl">insert</text>
+  <text x="1040" y="306" class="flowlbl">tidy rows</text>
+
+  <path d="M1080,585 L1002,585" class="flow"/>
+  <text x="1040" y="572" class="flowlbl">query</text>
+  <text x="1040" y="606" class="flowlbl">new rows</text>
+
+  <path d="M700,585 L302,585" class="flow"/>
+  <text x="560" y="608" class="flowlbl">HTTP · Dash web UI</text>
+
+  <!-- Published ports on the network boundary -->
+  <rect x="372" y="273" width="56" height="24" rx="12" class="port"/>
+  <text x="400" y="289" class="porttxt">:8001</text>
+  <rect x="372" y="573" width="56" height="24" rx="12" class="port"/>
+  <text x="400" y="589" class="porttxt">:8050</text>
+
+  <!-- Legend -->
+  <line x1="30" y1="790" x2="1370" y2="790" stroke="#e8e7e3"/>
+  <path d="M30,822 L76,822" class="flow"/>
+  <text x="86" y="826" font-size="13" fill="#0b0b0b">Data flow</text>
+  <rect x="190" y="810" width="56" height="24" rx="12" class="port"/>
+  <text x="218" y="826" class="porttxt">:port</text>
+  <text x="256" y="826" font-size="13" fill="#0b0b0b">Published port, bound to 127.0.0.1</text>
+  <rect x="510" y="812" width="40" height="20" rx="5" fill="#f2f6fc" stroke="#2a78d6" stroke-dasharray="4 3"/>
+  <text x="560" y="826" font-size="13" fill="#0b0b0b">Private network: etl and bigquery are unreachable from outside</text>
+  <text x="30" y="860" font-size="13" fill="#52514e">Steps: 1 send events → 2 validate &amp; buffer → 3 pull, tidy &amp; load → 4 store → 5 query &amp; visualize. Only ports 8001 (data in) and 8050 (dashboard) are exposed.</text>
+</svg>

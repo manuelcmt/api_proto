@@ -1,0 +1,54 @@
+# Only receiver (data in) and dashboard (frontend) publish ports, both on localhost.
+# bigquery and etl are reachable only inside the etl network.
+x-bq: &bq
+  BQ_PROJECT: demo-etl
+  BQ_DATASET: metrics
+  BQ_ENDPOINT: http://bigquery:9050  # remove to use real BigQuery (with GCP credentials)
+
+services:
+  # BigQuery emulator (the LocalStack equivalent for GCP)
+  bigquery:
+    image: ghcr.io/goccy/bigquery-emulator:0.8.1
+    command: --project=demo-etl --dataset=metrics --database=/data/bq.db
+    volumes:
+      - bqdata:/data
+    restart: unless-stopped
+    networks: [etl]
+
+  # receives events from the generator and buffers them
+  receiver:
+    build: { context: ., dockerfile: receiver/Dockerfile }
+    environment:
+      INGEST_TOKEN: ${INGEST_TOKEN}
+    volumes:
+      - bufferdata:/data
+    ports: ["127.0.0.1:8001:8000"]
+    restart: unless-stopped
+    networks: [etl]
+
+  # pulls batches from receiver, tidies them, loads BigQuery
+  etl:
+    build: { context: ., dockerfile: etl/Dockerfile }
+    environment:
+      <<: *bq
+      RECEIVER_URL: http://receiver:8000
+      INGEST_TOKEN: ${INGEST_TOKEN}
+    depends_on: [bigquery, receiver]
+    restart: unless-stopped
+    networks: [etl]
+
+  dashboard:
+    build: { context: ., dockerfile: dashboard/Dockerfile }
+    environment: *bq
+    ports: ["127.0.0.1:8050:8050"]
+    depends_on: [bigquery]
+    restart: unless-stopped
+    networks: [etl]
+
+networks:
+  etl:
+    driver: bridge
+
+volumes:
+  bqdata:
+  bufferdata:

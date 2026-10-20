@@ -1,0 +1,2 @@
+dash==4.4.1
+google-cloud-bigquery==3.46.2
